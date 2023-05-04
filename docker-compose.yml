@@ -1,0 +1,57 @@
+# Guacamole (uses MariaDB for credentials)
+
+# If using TightVNC, be aware that you cannot connect the host to itself -
+# unless you enable loopback connections.
+# Test VNC connect from another device.
+
+# If connecting to the host then the IP address may not work, instead use:
+# host.docker.internal
+# This will allow the Guacamole to connect to the host and host ports.
+
+version: '3.9'
+
+services:
+
+  maria-db:
+    image: mariadb:latest
+    container_name: maria-db
+    restart: always
+    env_file: .env
+    environment:
+      MYSQL_ROOT_USER: "${DB_USER}"
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_DATABASE: "${DB_NAME}"
+    volumes:
+      - ./db:/var/lib/mysql
+      - ./sql:/home/sql
+    ports:
+      - 3306:3306
+
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacd
+    restart: always
+    env_file: .env
+    environment:
+      MYSQL_USER: "${DB_USER}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_DATABASE: "${DB_NAME}"
+    ports:
+      - 4822:4822
+
+  guacamole:
+    image: guacamole/guacamole:latest
+    container_name: guacamole
+    depends_on:
+      - guacd
+      - maria-db
+    restart: always
+    env_file: .env
+    environment:
+      GUACD_HOSTNAME: host.docker.internal
+      MYSQL_HOSTNAME: host.docker.internal
+      MYSQL_USER: "${DB_USER}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_DATABASE: "${DB_NAME}"
+    ports:
+      - 8080:8080/tcp
